@@ -1,9 +1,30 @@
+import asyncio
+import re
+
 from aiohttp import web
 import aiofiles
 
 
 async def archive(request):
-    raise NotImplementedError
+    response = web.StreamResponse()
+    response.headers['Content-Type'] = 'application/zip'
+
+    # Отправляет клиенту HTTP заголовки
+    await response.prepare(request)
+    folder_name = re.match(r'/.*/(.*)/',str(request.rel_url)).group(1)
+    process = await asyncio.subprocess.create_subprocess_exec(
+        'zip',
+        '-r',
+        '-',
+        '.',
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        cwd=f'test_photos/{folder_name}'
+    )
+    while  not process.stdout.at_eof(): 
+        stdout = await process.stdout.read(100*1000)
+        await response.write(stdout)
+    return response
 
 
 async def handle_index_page(request):
