@@ -12,7 +12,7 @@ from cli import Cli
 
 
 
-async def archive(request, response_delay, photo_directory_path):
+async def archive(request, response_delay, photo_directory_path, log,):
     response = web.StreamResponse()
     response.headers['Content-Type'] = 'application/zip'
 
@@ -36,9 +36,11 @@ async def archive(request, response_delay, photo_directory_path):
             stdout = await process.stdout.read(100*1000)
             await asyncio.sleep(response_delay)
             await response.write(stdout)
-            logging.info("Sending archive chunk ...")
+            if log == 'enable':
+                logging.info("Sending archive chunk ...")
     except asyncio.CancelledError:
-        logging.warning("Download was interrupted")
+        if log == 'enable':
+                logging.warning("Download was interrupted")
     finally:
         process.kill()
 
@@ -63,15 +65,13 @@ if __name__ == '__main__':
     app = web.Application()
     app.add_routes([
         web.get('/', handle_index_page),
-        web.get('/archive/{archive_hash}/', partial(archive, photo_directory_path=args.path, response_delay=response_delay)),
+        web.get('/archive/{archive_hash}/', partial(archive, photo_directory_path=args.path, response_delay=response_delay, log = args.log)),
     ])
 
-    print(args.log)
-    if args.log == 'enable':
-        handler = logging.StreamHandler()
-        logging.basicConfig(handlers=(handler,), 
-                        format='[%(asctime)s | %(levelname)s]: %(message)s', 
-                        datefmt='%m.%d.%Y %H:%M:%S',
-                        level=logging.INFO)
+    handler = logging.StreamHandler()
+    logging.basicConfig(handlers=(handler,), 
+                    format='[%(asctime)s | %(levelname)s]: %(message)s', 
+                    datefmt='%m.%d.%Y %H:%M:%S',
+                    level=logging.INFO)
     
     web.run_app(app)
