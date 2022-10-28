@@ -2,6 +2,7 @@ import asyncio
 import re
 import os
 import logging
+from time import sleep
 
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPNotFound
@@ -28,10 +29,16 @@ async def archive(request):
         stderr=asyncio.subprocess.PIPE,
         cwd=f'test_photos/{folder_name}'
     )
-    while  not process.stdout.at_eof(): 
-        stdout = await process.stdout.read(100*1000)
-        await response.write(stdout)
-        logging.info("Sending archive chunk ...")
+    try:
+        while  not process.stdout.at_eof(): 
+            stdout = await process.stdout.read(100*1000)
+            await asyncio.sleep(3)
+            await response.write(stdout)
+            logging.info("Sending archive chunk ...")
+    finally:
+        logging.warning("Download was interrupted")
+        process.kill()
+
     return response
 
 
