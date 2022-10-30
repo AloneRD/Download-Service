@@ -1,8 +1,9 @@
 import asyncio
-import re
+from asyncio.log import logger
 import os
 import logging
 from functools import partial
+from tabnanny import verbose
 
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPNotFound
@@ -11,13 +12,14 @@ import aiofiles
 from cli import Cli
 
 
+logger = logging.getLogger('download_service')
 
-async def archive(request, response_delay, photo_directory_path, log,):
+
+async def archive(request, response_delay, photo_directory_path):
     response = web.StreamResponse()
     response.headers['Content-Type'] = 'application/zip'
 
-    print(request.match_info['archive_hash'])
-    folder_name = re.match(r'/.*/(.*)/',str(request.rel_url)).group(1)
+    folder_name = request.match_info['archive_hash']
     if not os.path.exists(f'{photo_directory_path}/{folder_name}'):
         response.headers['Content-Type'] = 'text/html'
         raise HTTPNotFound(reason = "Архив не найден")
@@ -37,12 +39,9 @@ async def archive(request, response_delay, photo_directory_path, log,):
             stdout = await process.stdout.read(100*1000)
             await asyncio.sleep(response_delay)
             await response.write(stdout)
-            if log == 'enable':
-                logging.info("Sending archive chunk ...")
-            print(process.returncode)
+            logger.info("Sending archive chunk ...")
     except asyncio.CancelledError:
-        if log == 'enable':
-            logging.warning("Download was interrupted")
+        logger.warning("Download was interrupted")
     finally:
         if process.returncode is None:
             process.kill()
@@ -68,15 +67,15 @@ if __name__ == '__main__':
     app = web.Application()
     app.add_routes([
         web.get('/', handle_index_page),
-        web.get('/archive/{archive_hash}/', partial(archive, photo_directory_path=args.path, response_delay=response_delay, log = args.log)),
+        web.get('/archive/{archive_hash}/', partial(archive, photo_directory_path=args.path, response_delay=response_delay)),
     ])
 
     handler = logging.StreamHandler()
-    logging.basicConfig(
-        handlers=(handler,), 
-        format='[%(asctime)s | %(levelname)s]: %(message)s', 
-        datefmt='%m.%d.%Y %H:%M:%S',
-        level=logging.INFO
-        )
+    formatter = logging.Formatter('[%(asctime)s | %(levelname)s]: %(message)s')
+    handler.setFormatter(formatter)
+    
+    logger.setLevel(args.verbose*10)
+    logger.addHandler(handler)
+    
     
     web.run_app(app)
