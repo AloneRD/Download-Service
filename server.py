@@ -38,11 +38,13 @@ async def archive(request, response_delay, photo_directory_path, log,):
             await response.write(stdout)
             if log == 'enable':
                 logging.info("Sending archive chunk ...")
+            print(process.returncode)
     except asyncio.CancelledError:
         if log == 'enable':
                 logging.warning("Download was interrupted")
     finally:
-        process.kill()
+        if process.returncode is None:
+            process.kill()
 
     return response
 
@@ -69,9 +71,11 @@ if __name__ == '__main__':
     ])
 
     handler = logging.StreamHandler()
-    logging.basicConfig(handlers=(handler,), 
-                    format='[%(asctime)s | %(levelname)s]: %(message)s', 
-                    datefmt='%m.%d.%Y %H:%M:%S',
-                    level=logging.INFO)
+    logging.basicConfig(
+        handlers=(handler,), 
+        format='[%(asctime)s | %(levelname)s]: %(message)s', 
+        datefmt='%m.%d.%Y %H:%M:%S',
+        level=logging.INFO
+        )
     
     web.run_app(app)
