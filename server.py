@@ -16,6 +16,7 @@ async def archive(request, response_delay, photo_directory_path, log,):
     response = web.StreamResponse()
     response.headers['Content-Type'] = 'application/zip'
 
+    print(request.match_info['archive_hash'])
     folder_name = re.match(r'/.*/(.*)/',str(request.rel_url)).group(1)
     if not os.path.exists(f'{photo_directory_path}/{folder_name}'):
         response.headers['Content-Type'] = 'text/html'
@@ -41,7 +42,7 @@ async def archive(request, response_delay, photo_directory_path, log,):
             print(process.returncode)
     except asyncio.CancelledError:
         if log == 'enable':
-                logging.warning("Download was interrupted")
+            logging.warning("Download was interrupted")
     finally:
         if process.returncode is None:
             process.kill()
