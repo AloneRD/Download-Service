@@ -42,6 +42,7 @@ async def archive(request, response_delay, photo_directory_path):
             logger.info("Sending archive chunk ...")
     except asyncio.CancelledError:
         logger.warning("Download was interrupted")
+        raise
     finally:
         if process.returncode is None:
             process.kill()
